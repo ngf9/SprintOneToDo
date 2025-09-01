@@ -102,3 +102,29 @@ body {
 .confetti-fall {
   animation: confetti-fall 2s linear forwards;
 }
+
+/* Drag handle styles */
+.drag-handle {
+  position: relative;
+}
+
+.drag-handle::before {
+  content: 'DRAG';
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: bold;
+  background: #0066FF;
+  color: white;
+  padding: 2px 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.drag-handle:hover::before {
+  opacity: 1;
+}
