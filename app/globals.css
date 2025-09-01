@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+:root {
+  --background: #000000;
+  --foreground: #ffffff;
+  --accent: #0066FF;
+  --accent-hover: #0052CC;
+  --surface: #ffffff;
+  --surface-hover: #f0f0f0;
+  --border: #000000;
+  --text-muted: #666666;
+  --check-complete: #0066FF;
+  --shadow: rgba(0, 0, 0, 0.25);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-text-muted: var(--text-muted);
+  --color-check-complete: var(--check-complete);
+  --color-shadow: var(--shadow);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Neo-Brutalist Styles */
+.monospace {
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: bold;
+}
+
+.diagonal-lines {
+  position: relative;
+  overflow: hidden;
+}
+
+.diagonal-lines::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(0, 102, 255, 0.1) 10px,
+    rgba(0, 102, 255, 0.1) 20px
+  );
+  pointer-events: none;
+}
+
+.brutalist-shadow {
+  box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+}
+
+.brutalist-shadow:hover {
+  box-shadow: 6px 6px 0px 0px rgba(0, 0, 0, 1);
+  transform: translate(-2px, -2px);
+}
+
+.brutalist-button {
+  transition: all 0.1s ease-out;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(calc(100vh + 20px)) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.confetti-fall {
+  animation: confetti-fall 2s linear forwards;
+}
