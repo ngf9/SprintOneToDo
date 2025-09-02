@@ -24,6 +24,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { id } from '@instantdb/react';
 import db from '../lib/db';
+import type { TodoEntity, InstantError } from '../types/instantdb';
 
 // Login Component with Neo-Brutalist design
 function Login() {
@@ -55,7 +56,7 @@ function EmailStep({ onSendEmail }: { onSendEmail: (email: string) => void }) {
       await db.auth.sendMagicCode({ email });
       onSendEmail(email);
     } catch (err) {
-      alert('ERROR: ' + ((err as any).body?.message || 'Failed to send code'));
+      alert('ERROR: ' + ((err as InstantError).body?.message || 'Failed to send code'));
       setIsLoading(false);
     }
   };
@@ -109,7 +110,7 @@ function CodeStep({ sentEmail, onBack }: { sentEmail: string; onBack: () => void
       await db.auth.signInWithMagicCode({ email: sentEmail, code });
     } catch (err) {
       setCode('');
-      alert('ERROR: ' + ((err as any).body?.message || 'Invalid code'));
+      alert('ERROR: ' + ((err as InstantError).body?.message || 'Invalid code'));
       setIsLoading(false);
     }
   };
@@ -330,14 +331,14 @@ function Main() {
     }
   });
 
-  const todos = (data?.todos || []).sort((a, b) => ((a as any).order || 0) - ((b as any).order || 0));
+  const todos = (data?.todos as TodoEntity[] || []).sort((a, b) => ((a.order || 0) - (b.order || 0)));
 
   // Ensure client-side only rendering for drag and drop
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const completedCount = todos.filter((todo) => (todo as any).completed).length;
+  const completedCount = todos.filter((todo) => todo.completed).length;
   const pendingCount = todos.length - completedCount;
 
   const sensors = useSensors(
@@ -352,7 +353,7 @@ function Main() {
   );
 
   const toggleTodo = (todoId: string) => {
-    const todo = todos.find((t) => (t as any).id === todoId);
+    const todo = todos.find((t) => t.id === todoId);
     if (todo && !todo.completed) {
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 2000);
@@ -370,7 +371,7 @@ function Main() {
   const addTodo = () => {
     if (newTodoText.trim()) {
       const newTodoId = id();
-      const maxOrder = Math.max(...todos.map((t) => (t as any).order || 0), 0);
+      const maxOrder = Math.max(...todos.map((t) => t.order || 0), 0);
       
       db.transact(
         db.tx.todos[newTodoId]
@@ -389,7 +390,7 @@ function Main() {
   };
 
   const handleEdit = (todoId: string) => {
-    const todo = todos.find((t) => (t as any).id === todoId);
+    const todo = todos.find((t) => t.id === todoId);
     if (todo) {
       setEditingId(todoId);
       setEditText(todo.title);
@@ -439,15 +440,15 @@ function Main() {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = todos.findIndex((item) => (item as any).id === active.id);
-      const newIndex = todos.findIndex((item) => (item as any).id === over.id);
+      const oldIndex = todos.findIndex((item) => item.id === active.id);
+      const newIndex = todos.findIndex((item) => item.id === over.id);
       
       if (oldIndex !== -1 && newIndex !== -1) {
         const reorderedTodos = arrayMove(todos, oldIndex, newIndex);
         
         // Update order for all affected todos
         const updates = reorderedTodos.map((todo, index: number) => 
-          db.tx.todos[(todo as any).id].update({ order: index })
+          db.tx.todos[todo.id].update({ order: index })
         );
         
         db.transact(updates);
@@ -480,8 +481,8 @@ function Main() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [showAddModal, editingId, showDeleteModal]);
 
-  const activeTodo = todos.find((todo) => (todo as any).id === activeId);
-  const todoToDelete = todos.find((todo) => (todo as any).id === deleteId);
+  const activeTodo = todos.find((todo) => todo.id === activeId);
+  const todoToDelete = todos.find((todo) => todo.id === deleteId);
 
   if (isLoading) {
     return (
@@ -747,7 +748,7 @@ function Main() {
           <div className="bg-surface border-4 border-border p-8 w-full max-w-md brutalist-shadow">
             <h2 className="text-2xl font-black uppercase mb-4 text-black">DELETE TASK?</h2>
             <p className="text-lg mb-8 text-black">
-              &quot;{(todoToDelete as any).title.toUpperCase()}&quot;
+              &quot;{todoToDelete.title.toUpperCase()}&quot;
             </p>
             <div className="flex gap-4">
               <button
