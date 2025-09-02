@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -22,22 +22,141 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { id } from '@instantdb/react';
+import db from '../lib/db';
 
-// Todo type
-type Todo = {
-  id: string;
-  text: string;
-  completed: boolean;
-};
+// Login Component with Neo-Brutalist design
+function Login() {
+  const [sentEmail, setSentEmail] = useState('');
 
-// Mock data for design purposes
-const mockTodos: Todo[] = [
-  { id: '1', text: 'Review project requirements', completed: false },
-  { id: '2', text: 'Set up development environment', completed: true },
-  { id: '3', text: 'Design database schema', completed: false },
-  { id: '4', text: 'Implement authentication flow', completed: false },
-  { id: '5', text: 'Create UI components', completed: true },
-];
+  return (
+    <div className="min-h-screen bg-background flex justify-center items-center p-4">
+      <div className="w-full max-w-md">
+        {!sentEmail ? (
+          <EmailStep onSendEmail={setSentEmail} />
+        ) : (
+          <CodeStep sentEmail={sentEmail} onBack={() => setSentEmail('')} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EmailStep({ onSendEmail }: { onSendEmail: (email: string) => void }) {
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    
+    setIsLoading(true);
+    try {
+      await db.auth.sendMagicCode({ email });
+      onSendEmail(email);
+    } catch (err) {
+      alert('ERROR: ' + ((err as any).body?.message || 'Failed to send code'));
+      setIsLoading(false);
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit} className="bg-surface border-4 border-border p-8 brutalist-shadow">
+      <h1 className="text-4xl font-black uppercase mb-2 text-black">SPRINTONE TODO</h1>
+      <p className="text-sm uppercase mb-8 text-text-muted">Neo-Brutalist Task Manager</p>
+      
+      <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-bold uppercase mb-2 text-black">EMAIL ADDRESS</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full bg-white border-4 border-border px-4 py-3 text-black placeholder-text-muted focus:outline-none focus:border-accent font-bold"
+            placeholder="you@example.com"
+            required
+            autoFocus
+            disabled={isLoading}
+          />
+        </div>
+        
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full py-4 bg-accent text-white border-4 border-border font-black uppercase hover:bg-accent-hover brutalist-button disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading ? 'SENDING...' : '[SEND MAGIC CODE]'}
+        </button>
+      </div>
+      
+      <p className="mt-6 text-xs text-text-muted">
+        WE&apos;LL SEND YOU A VERIFICATION CODE. AN ACCOUNT WILL BE CREATED IF YOU DON&apos;T HAVE ONE.
+      </p>
+    </form>
+  );
+}
+
+function CodeStep({ sentEmail, onBack }: { sentEmail: string; onBack: () => void }) {
+  const [code, setCode] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!code.trim()) return;
+    
+    setIsLoading(true);
+    try {
+      await db.auth.signInWithMagicCode({ email: sentEmail, code });
+    } catch (err) {
+      setCode('');
+      alert('ERROR: ' + ((err as any).body?.message || 'Invalid code'));
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-surface border-4 border-border p-8 brutalist-shadow">
+      <h2 className="text-3xl font-black uppercase mb-2 text-black">ENTER CODE</h2>
+      <p className="text-sm mb-8 text-text-muted">
+        CODE SENT TO <span className="font-bold text-black">{sentEmail.toUpperCase()}</span>
+      </p>
+      
+      <div className="space-y-6">
+        <div>
+          <label className="block text-sm font-bold uppercase mb-2 text-black">VERIFICATION CODE</label>
+          <input
+            type="text"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            className="w-full bg-white border-4 border-border px-4 py-3 text-black placeholder-text-muted focus:outline-none focus:border-accent font-bold text-center text-2xl monospace"
+            placeholder="123456"
+            required
+            autoFocus
+            disabled={isLoading}
+            maxLength={6}
+          />
+        </div>
+        
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full py-4 bg-accent text-white border-4 border-border font-black uppercase hover:bg-accent-hover brutalist-button disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading ? 'VERIFYING...' : '[VERIFY CODE]'}
+        </button>
+        
+        <button
+          type="button"
+          onClick={onBack}
+          disabled={isLoading}
+          className="w-full py-4 bg-white text-black border-4 border-border font-black uppercase hover:bg-gray-200 brutalist-button disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          [BACK]
+        </button>
+      </div>
+    </form>
+  );
+}
 
 // Sortable Task Item Component
 function SortableTaskItem({ 
@@ -51,7 +170,7 @@ function SortableTaskItem({
   onSaveEdit,
   onCancelEdit
 }: { 
-  todo: Todo; 
+  todo: { id: string; title: string; completed: boolean; order?: number }; 
   toggleTodo: (id: string) => void;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
@@ -146,7 +265,7 @@ function SortableTaskItem({
               : 'text-black'
             }
           `}>
-            {todo.text}
+            {todo.title}
           </span>
         )}
 
@@ -189,8 +308,9 @@ function SortableTaskItem({
   );
 }
 
-export default function Home() {
-  const [todos, setTodos] = useState(mockTodos);
+// Main App Component
+function Main() {
+  const user = db.useUser();
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTodoText, setNewTodoText] = useState('');
   const [showCelebration, setShowCelebration] = useState(false);
@@ -201,12 +321,23 @@ export default function Home() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  // Query todos for the current user
+  const { data, isLoading, error } = db.useQuery({
+    todos: {
+      $: {
+        where: { 'user.id': user.id }
+      }
+    }
+  });
+
+  const todos = (data?.todos || []).sort((a, b) => ((a as any).order || 0) - ((b as any).order || 0));
+
   // Ensure client-side only rendering for drag and drop
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const completedCount = todos.filter(todo => todo.completed).length;
+  const completedCount = todos.filter((todo) => (todo as any).completed).length;
   const pendingCount = todos.length - completedCount;
 
   const sensors = useSensors(
@@ -220,43 +351,58 @@ export default function Home() {
     })
   );
 
-  const toggleTodo = (id: string) => {
-    const todo = todos.find(t => t.id === id);
+  const toggleTodo = (todoId: string) => {
+    const todo = todos.find((t) => (t as any).id === todoId);
     if (todo && !todo.completed) {
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 2000);
     }
     
-    setTodos(todos.map(todo => 
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    ));
+    if (todo) {
+      db.transact(
+        db.tx.todos[todoId].update({
+          completed: !todo.completed
+        })
+      );
+    }
   };
 
   const addTodo = () => {
     if (newTodoText.trim()) {
-      setTodos([...todos, {
-        id: Date.now().toString(),
-        text: newTodoText,
-        completed: false
-      }]);
+      const newTodoId = id();
+      const maxOrder = Math.max(...todos.map((t) => (t as any).order || 0), 0);
+      
+      db.transact(
+        db.tx.todos[newTodoId]
+          .update({
+            title: newTodoText.trim(),
+            completed: false,
+            order: maxOrder + 1,
+            createdAt: Date.now()
+          })
+          .link({ user: user.id })
+      );
+      
       setNewTodoText('');
       setShowAddModal(false);
     }
   };
 
-  const handleEdit = (id: string) => {
-    const todo = todos.find(t => t.id === id);
+  const handleEdit = (todoId: string) => {
+    const todo = todos.find((t) => (t as any).id === todoId);
     if (todo) {
-      setEditingId(id);
-      setEditText(todo.text);
+      setEditingId(todoId);
+      setEditText(todo.title);
     }
   };
 
   const handleSaveEdit = () => {
     if (editText.trim() && editingId) {
-      setTodos(todos.map(todo => 
-        todo.id === editingId ? { ...todo, text: editText.trim() } : todo
-      ));
+      db.transact(
+        db.tx.todos[editingId].update({
+          title: editText.trim()
+        })
+      );
       setEditingId(null);
       setEditText('');
     }
@@ -267,14 +413,14 @@ export default function Home() {
     setEditText('');
   };
 
-  const handleDelete = (id: string) => {
-    setDeleteId(id);
+  const handleDelete = (todoId: string) => {
+    setDeleteId(todoId);
     setShowDeleteModal(true);
   };
 
   const confirmDelete = () => {
     if (deleteId) {
-      setTodos(todos.filter(todo => todo.id !== deleteId));
+      db.transact(db.tx.todos[deleteId].delete());
       setShowDeleteModal(false);
       setDeleteId(null);
     }
@@ -293,11 +439,19 @@ export default function Home() {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      setTodos((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
-        return arrayMove(items, oldIndex, newIndex);
-      });
+      const oldIndex = todos.findIndex((item) => (item as any).id === active.id);
+      const newIndex = todos.findIndex((item) => (item as any).id === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const reorderedTodos = arrayMove(todos, oldIndex, newIndex);
+        
+        // Update order for all affected todos
+        const updates = reorderedTodos.map((todo, index: number) => 
+          db.tx.todos[(todo as any).id].update({ order: index })
+        );
+        
+        db.transact(updates);
+      }
     }
 
     setActiveId(null);
@@ -326,8 +480,24 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [showAddModal, editingId, showDeleteModal]);
 
-  const activeTodo = todos.find(todo => todo.id === activeId);
-  const todoToDelete = todos.find(todo => todo.id === deleteId);
+  const activeTodo = todos.find((todo) => (todo as any).id === activeId);
+  const todoToDelete = todos.find((todo) => (todo as any).id === deleteId);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-white text-2xl font-bold uppercase">LOADING...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-red-500 text-2xl font-bold uppercase">ERROR: {error.message}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -358,9 +528,15 @@ export default function Home() {
       <header className="fixed top-0 left-0 right-0 z-40 border-b-4 border-white bg-black">
         <div className="max-w-4xl mx-auto px-6 py-6 flex justify-between items-center">
           <h1 className="text-3xl font-black uppercase text-white">TASKS</h1>
-          <button className="text-sm font-bold uppercase text-white hover:text-accent transition-colors">
-            [SIGN OUT]
-          </button>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-white">{user.email?.toUpperCase()}</span>
+            <button 
+              onClick={() => db.auth.signOut()}
+              className="text-sm font-bold uppercase text-white hover:text-accent transition-colors"
+            >
+              [SIGN OUT]
+            </button>
+          </div>
         </div>
       </header>
 
@@ -431,7 +607,7 @@ export default function Home() {
                         : 'text-black'
                       }
                     `}>
-                      {activeTodo.text}
+                      {activeTodo.title}
                     </span>
                   </div>
                 </div>
@@ -484,7 +660,7 @@ export default function Home() {
                       : 'text-black'
                     }
                   `}>
-                    {todo.text}
+                    {todo.title}
                   </span>
                   <div className="flex gap-2 flex-shrink-0">
                     <button
@@ -503,6 +679,14 @@ export default function Home() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {todos.length === 0 && (
+          <div className="text-center py-16">
+            <p className="text-2xl font-bold uppercase text-white mb-4">NO TASKS YET</p>
+            <p className="text-sm uppercase text-text-muted">PRESS + TO ADD YOUR FIRST TASK</p>
           </div>
         )}
 
@@ -563,7 +747,7 @@ export default function Home() {
           <div className="bg-surface border-4 border-border p-8 w-full max-w-md brutalist-shadow">
             <h2 className="text-2xl font-black uppercase mb-4 text-black">DELETE TASK?</h2>
             <p className="text-lg mb-8 text-black">
-              "{todoToDelete.text.toUpperCase()}"
+              &quot;{(todoToDelete as any).title.toUpperCase()}&quot;
             </p>
             <div className="flex gap-4">
               <button
@@ -582,6 +766,20 @@ export default function Home() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// App Component with Auth State
+export default function App() {
+  return (
+    <div>
+      <db.SignedIn>
+        <Main />
+      </db.SignedIn>
+      <db.SignedOut>
+        <Login />
+      </db.SignedOut>
     </div>
   );
 }
