@@ -447,7 +447,7 @@ function Main() {
         const reorderedTodos = arrayMove(todos, oldIndex, newIndex);
         
         // Update order for all affected todos
-        const updates = reorderedTodos.map((todo, index: number) => 
+        const updates = reorderedTodos.map((todo: TodoEntity, index: number) => 
           db.tx.todos[todo.id].update({ order: index })
         );
         
@@ -568,7 +568,7 @@ function Main() {
               strategy={verticalListSortingStrategy}
             >
               <div className="space-y-4">
-                {todos.map((todo) => (
+                {todos.map((todo: TodoEntity) => (
                   <SortableTaskItem 
                     key={todo.id} 
                     todo={todo} 
@@ -618,7 +618,7 @@ function Main() {
         ) : (
           // Non-draggable fallback for SSR
           <div className="space-y-4">
-            {todos.map((todo) => (
+            {todos.map((todo: TodoEntity) => (
               <div
                 key={todo.id}
                 className={`
